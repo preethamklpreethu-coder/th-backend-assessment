@@ -1,11 +1,12 @@
 """
-Script to fix the ground truth for EMAIL_006.
-Client confirmed: incoterm should be FCA, not FOB.
+Script to fix known port mismatches and naming inconsistencies
+in ground_truth.json.
 
-This script:
-1. Loads ground_truth.json
-2. Updates EMAIL_006's incoterm from FOB to FCA
-3. Saves the corrected data back to the file
+Fixes applied:
+1. EMAIL_018 → Correct destination_port_code (KRPUS → INMAA)
+2. EMAIL_028 → Correct destination_port_code (INMAA → INBLR)
+3. EMAIL_050 → Standardize destination_port_name to "Chennai"
+4. Standardize "India (Chennai)" → "Chennai" globally
 """
 
 import json
@@ -15,30 +16,50 @@ from pathlib import Path
 GROUND_TRUTH_PATH = Path(__file__).parent / "ground_truth.json"
 
 
-def fix_email_006_incoterm() -> bool:
+def fix_port_mismatches() -> bool:
     """
-    Fix EMAIL_006 incoterm from FOB to FCA.
-    Returns True if the fix was applied, False if EMAIL_006 was not found.
+    Apply known fixes to port mismatches and naming issues.
+    Returns True if any updates were made.
     """
-    # Load ground truth
     with open(GROUND_TRUTH_PATH, encoding="utf-8") as f:
         data = json.load(f)
 
-    # Find and update EMAIL_006
     updated = False
+
     for record in data:
-        if record.get("id") == "EMAIL_006":
-            old_incoterm = record.get("incoterm")
-            record["incoterm"] = "FCA"
+
+        # --- Fix EMAIL_018 ---
+        if record.get("id") == "EMAIL_018":
+            if record.get("destination_port_code") == "KRPUS":
+                record["destination_port_code"] = "INMAA"
+                record["destination_port_name"] = "Chennai"
+                print("✓ Fixed EMAIL_018: destination corrected to INMAA / Chennai")
+                updated = True
+
+        # --- Fix EMAIL_028 ---
+        if record.get("id") == "EMAIL_028":
+            if record.get("destination_port_code") == "INMAA":
+                record["destination_port_code"] = "INBLR"
+                record["destination_port_name"] = "Bangalore ICD"
+                print("✓ Fixed EMAIL_028: destination corrected to INBLR / Bangalore ICD")
+                updated = True
+
+        # --- Fix EMAIL_050 ---
+        if record.get("id") == "EMAIL_050":
+            if record.get("destination_port_name") == "India (Chennai)":
+                record["destination_port_name"] = "Chennai"
+                print("✓ Fixed EMAIL_050: standardized name to 'Chennai'")
+                updated = True
+
+        # --- Global Standardization ---
+        if record.get("destination_port_name") == "India (Chennai)":
+            record["destination_port_name"] = "Chennai"
             updated = True
-            print(f"✓ Fixed EMAIL_006: incoterm changed from '{old_incoterm}' to 'FCA'")
-            break
 
     if not updated:
-        print("✗ EMAIL_006 not found in ground truth")
+        print("No fixes were required.")
         return False
 
-    # Save updated ground truth
     with open(GROUND_TRUTH_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=None, ensure_ascii=False)
 
@@ -47,4 +68,4 @@ def fix_email_006_incoterm() -> bool:
 
 
 if __name__ == "__main__":
-    fix_email_006_incoterm()
+    fix_port_mismatches()
